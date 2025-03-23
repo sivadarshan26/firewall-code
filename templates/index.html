@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firewall Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function fetchAccessLogs() {
+            fetch("/access_logs")
+                .then(response => response.json())
+                .then(data => {
+                    let logList = document.getElementById("access-list");
+                    logList.innerHTML = "";
+                    data.forEach(log => {
+                        let item = document.createElement("li");
+                        item.className = "bg-blue-500 text-white p-2 rounded my-1";
+                        item.innerHTML = `IP: ${log.ip} | Location: ${log.city}, ${log.region}, ${log.country} | ISP: ${log.isp}`;
+                        logList.appendChild(item);
+                    });
+                });
+        }
+
+        setInterval(fetchAccessLogs, 5000);  // Auto-refresh logs every 5 seconds
+        window.onload = fetchAccessLogs;
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-6">
+        <h2 class="text-2xl font-bold text-center">🔥 Firewall Control Dashboard 🔥</h2>
+
+        <div class="mt-6 bg-white p-6 rounded-lg shadow-md">
+            <form action="/block" method="post" class="mb-4">
+                <label class="block font-bold">Block Port:</label>
+                <input type="text" name="port" placeholder="Enter port (e.g., 8080)" class="w-full p-2 border rounded-md">
+                <button type="submit" class="bg-red-500 text-white p-2 rounded-md mt-2 w-full">Block</button>
+            </form>
+
+            <form action="/unblock" method="post">
+                <label class="block font-bold">Unblock Port:</label>
+                <input type="text" name="port" placeholder="Enter port (e.g., 8080)" class="w-full p-2 border rounded-md">
+                <button type="submit" class="bg-green-500 text-white p-2 rounded-md mt-2 w-full">Unblock</button>
+            </form>
+
+            <div class="mt-6">
+                <h3 class="text-xl font-bold">Blocked Ports</h3>
+                <ul class="list-disc pl-5">
+                    {% if blocked_ports %}
+                        {% for port in blocked_ports %}
+                            <li class="text-red-500 font-semibold">{{ port }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-500">No ports blocked.</p>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        <h2 class="text-xl font-semibold mt-4">Access Logs</h2>
+        <ul id="access-list" class="mt-2"></ul>
+    </div>
+</body>
+</html>
