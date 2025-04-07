@@ -2,8 +2,10 @@ import os
 import platform
 import subprocess
 from flask import Flask, request, render_template ,jsonify
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 app = Flask(__name__)
+limiter = Limiter(get_remote_address, app=app, default_limits=["5 per hour", "1 per minute"])
 access_logs = []
 
 # Function to detect OS
