@@ -1,62 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Firewall Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        function fetchAccessLogs() {
-            fetch("/access_logs")
-                .then(response => response.json())
-                .then(data => {
-                    let logList = document.getElementById("access-list");
-                    logList.innerHTML = "";
-                    data.forEach(log => {
-                        let item = document.createElement("li");
-                        item.className = "bg-blue-500 text-white p-2 rounded my-1";
-                        item.innerHTML = `IP: ${log.ip} | Location: ${log.city}, ${log.region}, ${log.country} | ISP: ${log.isp}`;
-                        logList.appendChild(item);
-                    });
-                });
-        }
+      function fetchAccessLogs() {
+        fetch("/access_logs")
+          .then((response) => response.json())
+          .then((data) => {
+            let logList = document.getElementById("access-list");
+            logList.innerHTML = "";
 
-        setInterval(fetchAccessLogs, 5000);  // Auto-refresh logs every 5 seconds
-        window.onload = fetchAccessLogs;
+            data.forEach((log) => {
+              let item = document.createElement("li");
+
+              if (log.includes("[BLOCK]")) {
+                item.className = "bg-red-600 text-white p-2 rounded shadow";
+              } else if (log.includes("[UNBLOCK]")) {
+                item.className = "bg-green-600 text-white p-2 rounded shadow";
+              } else if (log.includes("[HTTP]")) {
+                item.className = "bg-yellow-600 text-white p-2 rounded shadow";
+              } else if (log.includes("[ACCESS]")) {
+                item.className = "bg-blue-600 text-white p-2 rounded shadow";
+              } else {
+                item.className = "bg-gray-400 text-white p-2 rounded shadow";
+              }
+
+              item.textContent = log;
+              logList.appendChild(item);
+            });
+          });
+      }
+
+      function fetchSniffedPorts() {
+        fetch("/sniffed_ports")
+          .then((response) => response.json())
+          .then((data) => {
+            const snifferList = document.getElementById("sniffer-list");
+            snifferList.innerHTML = "";
+            data.forEach((port) => {
+              const li = document.createElement("li");
+              li.textContent = "Port " + port;
+              snifferList.appendChild(li);
+            });
+          });
+      }
+
+      setInterval(fetchSniffedPorts, 5000);
+      setInterval(fetchAccessLogs, 3000);
+      window.onload = () => {
+        fetchAccessLogs();
+        fetchSniffedPorts();
+      };
     </script>
-</head>
-<body class="bg-gray-100">
+  </head>
+  <body class="bg-gradient-to-br from-gray-100 to-blue-100 min-h-screen font-sans">
     <div class="container mx-auto p-6">
-        <h2 class="text-2xl font-bold text-center">🔥 Firewall Control Dashboard 🔥</h2>
+      <h1 class="text-4xl font-bold text-center text-blue-700 mb-6">
+        🔥 Firewall Control Dashboard 🔥
+      </h1>
 
-        <div class="mt-6 bg-white p-6 rounded-lg shadow-md">
-            <form action="/block" method="post" class="mb-4">
-                <label class="block font-bold">Block Port:</label>
-                <input type="text" name="port" placeholder="Enter port (e.g., 8080)" class="w-full p-2 border rounded-md">
-                <button type="submit" class="bg-red-500 text-white p-2 rounded-md mt-2 w-full">Block</button>
-            </form>
+      <!-- Block / Unblock Forms -->
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <form action="/block" method="post" class="bg-white p-6 rounded-lg shadow-md">
+          <h2 class="text-xl font-semibold text-red-600 mb-2">Block Port</h2>
+          <input
+            type="text"
+            name="port"
+            placeholder="Enter port (e.g., 8080)"
+            class="w-full p-2 border rounded-md mb-2"
+          />
+          <button
+            type="submit"
+            class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md w-full"
+          >
+            Block
+          </button>
+        </form>
 
-            <form action="/unblock" method="post">
-                <label class="block font-bold">Unblock Port:</label>
-                <input type="text" name="port" placeholder="Enter port (e.g., 8080)" class="w-full p-2 border rounded-md">
-                <button type="submit" class="bg-green-500 text-white p-2 rounded-md mt-2 w-full">Unblock</button>
-            </form>
+        <form action="/unblock" method="post" class="bg-white p-6 rounded-lg shadow-md">
+          <h2 class="text-xl font-semibold text-green-600 mb-2">Unblock Port</h2>
+          <input
+            type="text"
+            name="port"
+            placeholder="Enter port (e.g., 8080)"
+            class="w-full p-2 border rounded-md mb-2"
+          />
+          <button
+            type="submit"
+            class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-md w-full"
+          >
+            Unblock
+          </button>
+        </form>
+      </div>
 
-            <div class="mt-6">
-                <h3 class="text-xl font-bold">Blocked Ports</h3>
-                <ul class="list-disc pl-5">
-                    {% if blocked_ports %}
-                        {% for port in blocked_ports %}
-                            <li class="text-red-500 font-semibold">{{ port }}</li>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-gray-500">No ports blocked.</p>
-                    {% endif %}
-                </ul>
-            </div>
+      <!-- Sniffer Control -->
+      <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold text-blue-700 mb-4">Sniffer Control</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <form action="/start_sniffer" method="post">
+            <label class="block font-bold mb-1">Start Sniffer on Port:</label>
+            <input
+              type="text"
+              name="sniff_port"
+              placeholder="e.g. 8080"
+              class="w-full p-2 border rounded-md mb-2"
+            />
+            <button
+              type="submit"
+              class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-md w-full"
+            >
+              Start Sniffer
+            </button>
+          </form>
+
+          <form action="/stop_sniffer" method="post">
+            <label class="block font-bold mb-1">Stop Sniffer on Port:</label>
+            <input
+              type="text"
+              name="sniff_port"
+              placeholder="e.g. 8080"
+              class="w-full p-2 border rounded-md mb-2"
+            />
+            <button
+              type="submit"
+              class="bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-md w-full"
+            >
+              Stop Sniffer
+            </button>
+          </form>
         </div>
-        <h2 class="text-xl font-semibold mt-4">Access Logs</h2>
-        <ul id="access-list" class="mt-2"></ul>
+      </div>
+
+      <!-- Sniffed Ports + Blocked Ports -->
+      <div class="flex flex-col md:flex-row gap-6 mb-6">
+        <div class="flex-1 bg-white p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-bold text-blue-600 mb-2">Active Sniffers</h3>
+          <ul id="sniffer-list" class="list-disc pl-5 text-blue-700 font-semibold space-y-1"></ul>
+        </div>
+
+        <div class="flex-1 bg-white p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-bold text-red-600 mb-2">Blocked Ports</h3>
+          <ul class="list-disc pl-5">
+            {% if blocked_ports %}
+              {% for port in blocked_ports %}
+              <li class="text-red-500 font-semibold">{{ port }}</li>
+              {% endfor %}
+            {% else %}
+              <p class="text-gray-500">No ports blocked.</p>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Access Logs -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Access Logs</h2>
+        <ul id="access-list" class="mt-2 space-y-2"></ul>
+      </div>
     </div>
-</body>
+  </body>
 </html>
