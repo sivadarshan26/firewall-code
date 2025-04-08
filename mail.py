@@ -1,9 +1,9 @@
 import smtplib
 from email.message import EmailMessage
 
-SENDER_EMAIL = "darshanpc2606@gmail.com"
-APP_PASSWORD = "hoaiphonukmspdur"
-RECIPIENT_EMAIL = "sivadarshan2270@gmail.com"
+SENDER_EMAIL = "abishekpandiarajan645@gmail.com"
+APP_PASSWORD = ""
+RECIPIENT_EMAIL = "abishekpandiarajan645@gmail.com"
 
 def send_alert_email(ip):
     msg = EmailMessage()

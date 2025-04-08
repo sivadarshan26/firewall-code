@@ -1,0 +1,10 @@
+[INFO] Sniffer started on port 8001 by 127.0.0.1
+[ACCESS] 2025-04-08 20:36:05 admin - Local, Local, Local (Localhost)
+[HTTP] 2025-04-08 20:36:11.876542 192.168.187.195 -> 192.168.187.88:8001 GET /
+[BLOCK] Port 8001 blocked from 127.0.0.1
+[ACCESS] 2025-04-08 20:44:24 admin - Local, Local, Local (Localhost)
+[UNBLOCK] Port 8001 unblocked from 127.0.0.1
+[ACCESS] 2025-04-08 20:47:00 admin - Local, Local, Local (Localhost)
+[INFO] Sniffer started on port 8001 by 127.0.0.1
+[ACCESS] 2025-04-08 20:47:31 admin - Local, Local, Local (Localhost)
+[HTTP] 2025-04-08 20:47:38.765573 192.168.187.195 -> 192.168.187.88:8001 GET /

@@ -13,7 +13,7 @@ from mail import send_alert_email
 
 
 app = Flask(__name__)
-limiter = Limiter(get_remote_address, app=app, default_limits=["15 per minute"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["1000 per minute"])
 access_logs = []
 
 active_sniffers = {}
