@@ -1,5 +1,8 @@
 from scapy.all import sniff, IP, TCP, Raw
 from datetime import datetime
+import json
+import os
+
 
 HTTP_METHODS = [b"GET", b"POST", b"PUT", b"DELETE", b"HEAD", b"OPTIONS", b"PATCH"]
 
@@ -28,3 +31,29 @@ def start_sniffer(port=None, stop_event=None):
         store=0,
         stop_filter=stop_filter if stop_event else None
     )
+
+
+# sniffer_states
+SNIFFER_STATE_FILE = "sniffer_ports.json"
+
+def load_sniffer_ports():
+    if os.path.exists(SNIFFER_STATE_FILE):
+        with open(SNIFFER_STATE_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_sniffer_ports(ports):
+    with open(SNIFFER_STATE_FILE, "w") as f:
+        json.dump(list(set(ports)), f)
+
+def add_sniffer_port(port):
+    ports = load_sniffer_ports()
+    if port not in ports:
+        ports.append(port)
+        save_sniffer_ports(ports)
+
+def remove_sniffer_port(port):
+    ports = load_sniffer_ports()
+    if port in ports:
+        ports.remove(port)
+        save_sniffer_ports(ports)

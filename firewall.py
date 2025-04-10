@@ -3,33 +3,65 @@ import platform
 import threading
 import requests
 import subprocess
-from flask import Flask, request, render_template ,jsonify, redirect, url_for
+import json
+from flask import Flask, request, render_template, jsonify, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import flask_limiter.errors
-from sniffer import start_sniffer
+from sniffer import start_sniffer, load_sniffer_ports, add_sniffer_port, remove_sniffer_port
 from datetime import datetime
 from mail import send_alert_email
 
 
 app = Flask(__name__)
-limiter = Limiter(get_remote_address, app=app, default_limits=["1000 per minute"])
-access_logs = []
+limiter = Limiter(get_remote_address, app=app)
 
+access_logs = []
 active_sniffers = {}
 
-# Function to detect OS
+RATE_LIMITS_FILE = "rate_limits.json"
+port_rate_limits = {}
+
+# ------------------- Rate Limit Persistence -------------------
+
+def load_rate_limits():
+    global port_rate_limits
+    if os.path.exists(RATE_LIMITS_FILE):
+        try:
+            with open(RATE_LIMITS_FILE, "r") as f:
+                port_rate_limits = json.load(f)
+        except Exception as e:
+            print(f"[ERROR] Failed to load rate limits: {e}")
+            port_rate_limits = {}
+
+def save_rate_limits():
+    try:
+        with open(RATE_LIMITS_FILE, "w") as f:
+            json.dump(port_rate_limits, f)
+    except Exception as e:
+        print(f"[ERROR] Failed to save rate limits: {e}")
+
+def set_limit_for_port(port, rate):
+    port_rate_limits[str(port)] = rate
+    save_rate_limits()
+    return True
+
+def get_limit_for_port(port):
+    return port_rate_limits.get(str(port))
+
+# ------------------- OS & Geo Info -------------------
+
 def get_os():
     return platform.system()
+
 def get_external_ip():
-    """Get the external IP of the machine"""
     try:
         response = requests.get("https://api64.ipify.org?format=json")
         return response.json()["ip"]
     except:
         return "Unknown"
+
 def get_geo_ip(ip):
-    """Fetch location info of an IP address"""
     try:
         response = requests.get(f"http://ipinfo.io/{ip}/json")
         data = response.json()
@@ -44,7 +76,6 @@ def get_geo_ip(ip):
         return {"ip": ip, "city": "Unknown", "region": "Unknown", "country": "Unknown", "isp": "Unknown"}
 
 def log_access(ip):
-    """Log incoming access attempts with Geo-IP details"""
     is_admin = ip == "127.0.0.1"
 
     geo_info = {
@@ -62,13 +93,13 @@ def log_access(ip):
             pass
 
     access_logs.append(geo_info)
-
-    # Log line with timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[ACCESS] {timestamp} {geo_info['ip']} - {geo_info['city']}, {geo_info['region']}, {geo_info['country']} ({geo_info['isp']})\n"
 
     with open("firewall.log", "a") as f:
         f.write(log_line)
+
+# ------------------- Port Block/Unblock -------------------
 
 def block_port(port):
     os_type = get_os()
@@ -82,8 +113,6 @@ def block_port(port):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout if result.returncode == 0 else result.stderr
 
-
-# Function to unblock a port
 def unblock_port(port):
     os_type = get_os()
     if os_type == "Windows":
@@ -96,7 +125,6 @@ def unblock_port(port):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout if result.returncode == 0 else result.stderr
 
-# Function to list blocked ports
 def get_blocked_ports():
     os_type = get_os()
     blocked_ports = []
@@ -104,19 +132,17 @@ def get_blocked_ports():
     if os_type == "Windows":
         command = 'netsh advfirewall firewall show rule name=all'
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
         lines = result.stdout.splitlines()
         for i in range(len(lines)):
-            if "Rule Name" in lines[i] and "BlockPort" in lines[i]:  
+            if "Rule Name" in lines[i] and "BlockPort" in lines[i]:
                 for j in range(i, min(i + 10, len(lines))):
-                    if "LocalPort" in lines[j]:  
+                    if "LocalPort" in lines[j]:
                         port = lines[j].split(":")[-1].strip()
                         blocked_ports.append(port)
 
     elif os_type == "Linux":
         command = "sudo iptables -L INPUT -n --line-numbers"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
         for line in result.stdout.splitlines():
             if "DROP" in line and "dpt:" in line:
                 parts = line.split()
@@ -126,27 +152,36 @@ def get_blocked_ports():
 
     return blocked_ports
 
+# Restore sniffers on startup
+for port in load_sniffer_ports():
+    if port not in active_sniffers:
+        stop_event = threading.Event()
+        thread = threading.Thread(target=start_sniffer, kwargs={"port": port, "stop_event": stop_event})
+        thread.daemon = True
+        thread.start()
+        active_sniffers[port] = (thread, stop_event)
+
+        with open("firewall.log", "a") as f:
+            f.write(f"[INFO] Sniffer auto-restarted on port {port}\n")
+
+
+# ------------------- Error Handling -------------------
+
 @app.errorhandler(flask_limiter.errors.RateLimitExceeded)
 def ratelimit_handler(e):
     ip = request.remote_addr
     send_alert_email(ip)
     return "⚠️ Rate limit exceeded. Admin has been notified.", 429
 
-# Start the packet sniffer in a separate thread
-# sniffer_thread = threading.Thread(target=start_sniffer, kwargs={"port": 8080})
-# sniffer_thread.daemon = True
-# sniffer_thread.start()
-
-# Flask Routes
-@app.route("/log_attempt", methods=["GET", "POST"])
+# ------------------- Routes -------------------
 
 @app.route("/")
 def home():
-    log_access(request.remote_addr)  # Add this
+    log_access(request.remote_addr)
     blocked_ports = get_blocked_ports()
-    return render_template("index.html", blocked_ports=blocked_ports)
+    return render_template("index.html", blocked_ports=blocked_ports, limits=port_rate_limits)
 
-@app.route('/block', methods=['POST'])
+@app.route("/block", methods=["POST"])
 def block_port_route():
     port = request.form.get("port")
     result = block_port(port)
@@ -156,13 +191,11 @@ def block_port_route():
 
     return redirect(url_for('home'))
 
-
 @app.route("/unblock", methods=["POST"])
 def unblock():
     port = request.form.get("port")
     result = unblock_port(port)
 
-    # Log the action
     with open("firewall.log", "a") as f:
         f.write(f"[UNBLOCK] Port {port} unblocked from {request.remote_addr}\n")
 
@@ -175,23 +208,20 @@ def log_attempt():
     return jsonify({"message": "Logged", "ip": ip})
 
 @app.route("/access_logs")
+@limiter.exempt
 def access_logs_view():
     log_entries = []
-
     if os.path.exists("firewall.log"):
         with open("firewall.log", "r") as f:
             for line in f:
                 line = line.strip()
                 if line:
                     log_entries.append(line)
-
-    return jsonify(log_entries[-20:][::-1])  # Last 20 entries, newest first
+    return jsonify(log_entries[-20:][::-1])
 
 @app.route("/start_sniffer", methods=["POST"])
 def start_sniffer_route():
     port = int(request.form.get("sniff_port"))
-
-    # If already running, don't start again
     if port in active_sniffers:
         return f"❌ Sniffer already running on port {port}", 400
 
@@ -199,6 +229,7 @@ def start_sniffer_route():
     thread = threading.Thread(target=start_sniffer, kwargs={"port": port, "stop_event": stop_event})
     thread.daemon = True
     thread.start()
+    add_sniffer_port(port)
 
     active_sniffers[port] = (thread, stop_event)
 
@@ -210,10 +241,11 @@ def start_sniffer_route():
 @app.route("/stop_sniffer", methods=["POST"])
 def stop_sniffer_route():
     port = int(request.form.get("sniff_port"))
-
     if port in active_sniffers:
         thread, stop_event = active_sniffers[port]
-        stop_event.set()  # Signal the thread to stop
+        stop_event.set()
+        remove_sniffer_port(port)
+
         del active_sniffers[port]
 
         with open("firewall.log", "a") as f:
@@ -223,14 +255,30 @@ def stop_sniffer_route():
     else:
         return f"❌ No sniffer running on port {port}", 400
 
-
 @app.route("/sniffed_ports")
 def sniffed_ports():
     return jsonify(list(active_sniffers.keys()))
 
+@app.route("/set_limit", methods=["POST"])
+def set_limit():
+    port = request.form.get("port")
+    rate = request.form.get("rate")
 
+    if not port or not rate:
+        return "❌ Port and rate limit are required.", 400
+
+    try:
+        port = int(port)
+        success = set_limit_for_port(port, rate)
+        if success:
+            return f"✅ Rate limit for port {port} set to '{rate}'"
+        else:
+            return "❌ Failed to set rate limit.", 400
+    except ValueError:
+        return "❌ Invalid port number.", 400
 
 @app.route("/port/<int:port_number>", methods=["GET", "POST"])
+@limiter.limit(lambda: get_limit_for_port(request.view_args["port_number"]) or "1000 per minute")
 def simulate_port_hit(port_number):
     ip = request.remote_addr
     log_access(ip)
@@ -240,5 +288,24 @@ def simulate_port_hit(port_number):
 
     return jsonify({"message": f"Access to port {port_number} logged."})
 
+
+@app.route("/remove_limit/<int:port>", methods=["POST"])
+def remove_limit(port):
+    port = str(port)
+    if port in port_rate_limits:
+        del port_rate_limits[port]
+        save_rate_limits()
+
+        with open("firewall.log", "a") as f:
+            f.write(f"[LIMIT REMOVED] Rate limit removed from port {port} by {request.remote_addr}\n")
+
+        return redirect(url_for('home'))
+    else:
+        return "❌ No rate limit set on that port.", 404
+
+
+# ------------------- App Entry -------------------
+
 if __name__ == "__main__":
+    load_rate_limits()
     app.run(host="0.0.0.0", port=5000, debug=True)
