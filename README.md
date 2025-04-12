@@ -1,6 +1,6 @@
-# SentryX
+# SentriX
 
-**SentryX** is a lightweight, open-source firewall and monitoring tool built with Python and Flask.  
+**SentriX** is a lightweight, open-source firewall and monitoring tool built with Python and Flask.  
 It provides port rate limiting, blocking/unblocking, logging, and email alerts for enhanced security of local services.
 
 ---
@@ -18,8 +18,8 @@ It provides port rate limiting, blocking/unblocking, logging, and email alerts f
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourname/sentryx.git
-   cd sentryx
+   git clone https://github.com/yourname/SentriX.git
+   cd SentriX
 
 2. Set up a virtual environment (optional but recommended):
    ```bash
