@@ -3,184 +3,191 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Firewall Control</title>
+    <title>SentryX</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      function fetchAccessLogs() {
-        fetch("/access_logs")
-          .then((response) => response.json())
-          .then((data) => {
-            const logList = document.getElementById("access-list");
-            logList.innerHTML = "";
-
-            data.forEach((log) => {
-              const item = document.createElement("li");
-              item.className = "text-sm p-2 rounded border bg-white";
-              if (log.includes("[BLOCK]"))
-                item.classList.add("border-red-400", "text-red-500");
-              else if (log.includes("[UNBLOCK]"))
-                item.classList.add("border-green-400", "text-green-600");
-              else if (log.includes("[HTTP]"))
-                item.classList.add("border-yellow-400", "text-yellow-600");
-              else if (log.includes("[ACCESS]"))
-                item.classList.add("border-blue-400", "text-blue-600");
-              else item.classList.add("border-gray-300", "text-gray-600");
-
-              item.textContent = log;
-              logList.appendChild(item);
-            });
-          });
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Fira Code", monospace;
+        background-color: #000;
+        color: #00ff00;
       }
-
-      function fetchSniffedPorts() {
-        fetch("/sniffed_ports")
-          .then((response) => response.json())
-          .then((data) => {
-            const snifferList = document.getElementById("sniffer-list");
-            snifferList.innerHTML = "";
-            data.forEach((port) => {
-              const li = document.createElement("li");
-              li.textContent = "Port " + port;
-              li.className = "text-gray-700";
-              snifferList.appendChild(li);
-            });
-          });
+      ::selection {
+        background-color: #00ff00;
+        color: #000;
       }
-
-      setInterval(fetchSniffedPorts, 5000);
-      setInterval(fetchAccessLogs, 3000);
-      window.onload = () => {
-        fetchAccessLogs();
-        fetchSniffedPorts();
-      };
-    </script>
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #111;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        padding: 8px 12px;
+        border-radius: 4px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 9999;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+    </style>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
   </head>
 
-  <body class="bg-slate-50 text-gray-800 font-sans">
-    <div class="max-w-4xl mx-auto px-4 py-10 space-y-10">
-      <h1 class="text-3xl font-semibold text-center text-blue-700">
-        Firewall Dashboard
-      </h1>
-
-      <!-- Control Forms -->
-      <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <form
-          action="/block"
-          method="post"
-          class="bg-white p-4 rounded border shadow-sm"
-        >
-          <h2 class="text-base font-medium text-red-500 mb-2">Block Port</h2>
-          <input
-            type="text"
-            name="port"
-            placeholder="e.g. 8080"
-            class="w-full p-2 border rounded mb-2"
-            required
-          />
-          <button
-            type="submit"
-            class="w-full text-sm bg-red-500 hover:bg-red-600 text-white py-1.5 rounded"
-          >
-            Block
-          </button>
-        </form>
-
-        <!-- <form action="/unblock" method="post" class="bg-white p-4 rounded border shadow-sm">
-          <h2 class="text-base font-medium text-green-500 mb-2">Unblock Port</h2>
-          <input type="text" name="port" placeholder="e.g. 8080" class="w-full p-2 border rounded mb-2" required />
-          <button type="submit" class="w-full text-sm bg-green-500 hover:bg-green-600 text-white py-1.5 rounded">
-            Unblock
-          </button>
-        </form> -->
-
-        <form
-          method="POST"
-          action="/set_limit"
-          class="bg-white p-4 rounded border shadow-sm"
-        >
-          <h2 class="text-base font-medium text-purple-500 mb-2">
-            Set Rate Limit
-          </h2>
-          <input
-            type="number"
-            name="port"
-            placeholder="Port"
-            class="w-full p-2 border rounded mb-2"
-            required
-          />
-          <input
-            type="text"
-            name="rate"
-            placeholder="e.g. 10 per minute"
-            class="w-full p-2 border rounded mb-2"
-            required
-          />
-          <button
-            type="submit"
-            class="w-full text-sm bg-purple-500 hover:bg-purple-600 text-white py-1.5 rounded"
-          >
-            Apply
-          </button>
-        </form>
+  <body class="text-[#00ff00] text-sm">
+    <div class="max-w-5xl mx-auto px-4 py-6 space-y-8">
+      <div class="text-center text-[#00ff00] text-base mb-4">
+        <pre class="whitespace-pre-wrap leading-tight -ml-20">
+          ███████╗███████╗███╗   ██╗████████╗██████╗ ██╗██╗  ██╗
+          ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██║╚██╗██╔╝
+          ███████╗█████╗  ██╔██╗ ██║   ██║   ██████╔╝██║ ╚███╔╝ 
+               ██║██╔══╝  ██║╚██╗██║   ██║   ██ ██═╝ ██║ ██╔██╗ 
+          ███████║███████╗██║ ╚████║   ██║   ██║ ███╗██║██╔╝ ██╗
+          ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝ ╚══╝╚═╝╚═╝  ╚═╝
+        </pre>
       </div>
 
-      <!-- Sniffer Controls -->
-      <div class="bg-white p-6 rounded border shadow-sm">
-        <h2 class="text-lg font-medium text-blue-600 mb-4">Packet Sniffer</h2>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <form action="/start_sniffer" method="post">
-            <label class="block mb-1 text-sm font-medium">Start on Port:</label>
+      <!-- Control Forms -->
+      <div class="grid sm:grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="border border-red-500 p-4 space-y-2">
+          <h2 class="text-red-400 text-sm font-semibold uppercase">
+            Block Port
+          </h2>
+          <form id="block-form" class="space-y-2 justify-between flex flex-col h-[87%]">
             <input
               type="text"
-              name="sniff_port"
-              class="w-full p-2 border rounded mb-2"
-              required
+              name="port"
+              placeholder="e.g. 8080"
+              class="bg-black text-[#00ff00] border border-red-500 px-2 py-1 w-full focus:outline-none"
             />
             <button
               type="submit"
-              class="w-full bg-blue-500 hover:bg-blue-600 text-white py-1.5 rounded text-sm"
+              title="Block Port"
+              class="w-full bg-red-500/10 border border-red-500 px-2 py-1 text-red-400 hover:bg-red-900"
             >
-              Start
+              Block
             </button>
           </form>
+        </div>
 
-          <form action="/stop_sniffer" method="post">
-            <label class="block mb-1 text-sm font-medium">Stop on Port:</label>
+        <div class="border border-purple-500 p-4 space-y-2">
+          <h2 class="text-purple-300 text-sm font-semibold uppercase">
+            Rate Limiter
+          </h2>
+          <form id="limit-form" class="space-y-2 justify-between flex flex-col h-[87%]">
+            <div>
+              <label class="block text-xs text-purple-300">Port Number</label>
+              <input
+                type="text"
+                name="port"
+                required
+                placeholder="e.g. 8000"
+                class="bg-black text-[#00ff00] border border-purple-500 px-2 py-1 w-full focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <div class="w-full flex items-center mt-4">
+                <label class="block text-xs text-purple-300 w-32 wrap">Limit Mode</label>
+                <hr class="w-full border-purple-500"/>
+              </div>
+              <div class="flex space-x-4 mt-1 text-white text-sm">
+                <label>
+                  <input type="radio" name="mode" value="custom" checked />
+                  Custom
+                </label>
+                <label>
+                  <input type="radio" name="mode" value="scheme" /> Predefined
+                </label>
+              </div>
+            </div>
+
+            <div id="custom-fields">
+              <label class="block text-xs text-purple-300">Custom Rate</label>
+              <div class="flex space-x-2">
+                <input
+                  type="number"
+                  name="rate"
+                  class="bg-black text-white border outline-none border-purple-500 p-1 w-1/2"
+                  placeholder="e.g. 10"
+                />
+                <select
+                  name="unit"
+                  class="bg-black text-white border border-purple-500 p-1 w-1/2"
+                >
+                  <option value="second">per second</option>
+                  <option value="minute">per minute</option>
+                  <option value="hour">per hour</option>
+                  <option value="day">per day</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="scheme-fields" class="hidden">
+              <label class="block text-xs text-purple-300">Select Scheme</label>
+              <select
+                name="scheme"
+                class="bg-black text-white border border-purple-500 p-1 rounded w-full"
+              >
+                <option value="minimal">🧊 Minimal (5/min)</option>
+                <option value="hardcore">⚡ Hardcore (20/sec)</option>
+                <option value="burst">💥 Burst (100/min)</option>
+                <option value="standard">🚀 Standard (1000/hour)</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full bg-purple-500/10 border border-purple-500 px-2 py-1 text-purple-400 hover:bg-purple-900"
+            >
+              Set Limit
+            </button>
+          </form>
+        </div>
+
+        <div class="border border-cyan-500 p-4 space-y-2">
+          <h2 class="text-cyan-400 text-sm font-semibold uppercase">
+            Start Sniffer
+          </h2>
+          <form id="sniffer-form" class="space-y-2 justify-between flex flex-col h-[87%]">
             <input
               type="text"
               name="sniff_port"
-              class="w-full p-2 border rounded mb-2"
+              placeholder="e.g. 8000"
+              class="w-full px-2 py-1 bg-black text-[#00ff00] border border-cyan-500 focus:outline-none"
               required
             />
             <button
               type="submit"
-              class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 rounded text-sm"
+              title="Start Sniffer"
+              class="w-full bg-cyan-500/10 border border-cyan-500 px-2 py-1 text-cyan-400 hover:bg-cyan-900"
             >
-              Stop
+              Start
             </button>
           </form>
         </div>
       </div>
 
-      <!-- Current Status -->
-      <div class="grid sm:grid-cols-2 gap-6">
-        <!-- Blocked Ports -->
-        <div class="bg-white p-4 rounded border shadow-sm">
-          <h3 class="font-semibold text-red-600 mb-2">Blocked Ports</h3>
-          <ul class="space-y-1 text-sm">
+      <!-- Status Panels -->
+      <div class="grid sm:grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="border border-red-500 p-4">
+          <h3 class="text-red-400 font-semibold mb-2">Blocked Ports</h3>
+          <ul id="unblock-buttons" class="space-y-1">
             {% for port in blocked_ports %}
-            <li class="flex justify-between items-center group">
-              <span class="text-red-500">Port {{ port }}</span>
-              <form action="/unblock" method="post" class="inline">
-                <input type="hidden" name="port" value="{{ port }}" />
-                <button
-                  type="submit"
-                  class="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Unblock Port"
-                >
-                  ✖
-                </button>
-              </form>
+            <li class="flex justify-between items-center">
+              <span class="text-white">Port {{ port }}</span>
+              <button
+                data-port="{{ port }}"
+                title="Unblock Port"
+                class="text-xs text-red-400 hover:text-red-600"
+              >
+                ✖
+              </button>
             </li>
             {% else %}
             <li class="text-gray-400">No ports blocked.</li>
@@ -188,35 +195,37 @@
           </ul>
         </div>
 
-        <!-- Sniffers -->
-        <div class="bg-white p-4 rounded border shadow-sm">
-          <h3 class="font-semibold text-blue-600 mb-2">Active Sniffers</h3>
-          <ul
-            id="sniffer-list"
-            class="list-disc list-inside text-sm space-y-1"
-          ></ul>
+        <div class="border border-purple-500 p-4">
+          <h3 class="text-purple-400 font-semibold mb-2">Rate-Limited Ports</h3>
+          <ul class="space-y-1">
+            {% for port, limit in limits.items() %}
+            <li class="flex justify-between items-center">
+              <span>
+                Port {{ port }} →
+                <span class="text-gray-300">{{ limit }}</span>
+              </span>
+              <button
+                data-remove-limit="{{ port }}"
+                title="Remove Limit"
+                class="text-red-400 hover:text-red-600 text-xs"
+              >
+                ✖
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="border border-cyan-500 p-4 col-span-full md:col-span-1">
+          <h3 class="text-cyan-400 font-semibold mb-2">Active Sniffers</h3>
+          <ul id="sniffer-list" class="space-y-1 text-white"></ul>
         </div>
       </div>
 
-      <!-- Rate Limits -->
-      <div class="bg-white p-4 rounded border shadow-sm">
-        <h3 class="font-semibold text-purple-600 mb-2">Rate-Limited Ports</h3>
-        <ul>
-          {% for port, limit in limits.items() %}
-            <li>
-              Port {{ port }} → Limit: {{ limit }}
-              <form action="/remove_limit/{{ port }}" method="post" style="display:inline;">
-                <button type="submit" class="text-red-500 hover:text-red-700 ml-2">❌ Remove</button>
-              </form>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-
       <!-- Logs -->
-      <div class="bg-white p-4 rounded border shadow-sm">
-        <h3 class="font-semibold text-gray-700 mb-2">Access Logs</h3>
-        <ul id="access-list" class="space-y-1 text-sm"></ul>
+      <div class="border border-green-500 p-4">
+        <h3 class="text-green-400 font-semibold mb-2">Access Logs</h3>
+        <ul id="access-list" class="space-y-1"></ul>
       </div>
     </div>
   </body>

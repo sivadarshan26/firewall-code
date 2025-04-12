@@ -1,34 +1,12 @@
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-08 20:36:05 admin - Local, Local, Local (Localhost)
-[HTTP] 2025-04-08 20:36:11.876542 192.168.187.195 -> 192.168.187.88:8001 GET /
-[BLOCK] Port 8001 blocked from 127.0.0.1
-[ACCESS] 2025-04-08 20:44:24 admin - Local, Local, Local (Localhost)
-[UNBLOCK] Port 8001 unblocked from 127.0.0.1
-[ACCESS] 2025-04-08 20:47:00 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-08 20:47:31 admin - Local, Local, Local (Localhost)
-[HTTP] 2025-04-08 20:47:38.765573 192.168.187.195 -> 192.168.187.88:8001 GET /
-[ACCESS] 2025-04-10 20:05:19 admin - Local, Local, Local (Localhost)
-[UNBLOCK] Port 8001 unblocked from 127.0.0.1
-[ACCESS] 2025-04-10 20:08:08 admin - Local, Local, Local (Localhost)
-[BLOCK] Port 8001 blocked from 127.0.0.1
-[ACCESS] 2025-04-10 20:08:26 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:08:34 admin - Local, Local, Local (Localhost)
-[ACCESS] 2025-04-10 20:15:56 admin - Local, Local, Local (Localhost)
-[ACCESS] 2025-04-10 20:22:26 admin - Local, Local, Local (Localhost)
-[ACCESS] 2025-04-10 20:22:46 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:23:23 admin - Local, Local, Local (Localhost)
-[ACCESS] 2025-04-10 20:25:36 admin - Local, Local, Local (Localhost)
-[ACCESS] 2025-04-10 20:40:11 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:40:41 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer stopped on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:40:57 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:41:02 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer started on port 8002 by 127.0.0.1
-[ACCESS] 2025-04-10 20:41:07 admin - Local, Local, Local (Localhost)
-[INFO] Sniffer stopped on port 8001 by 127.0.0.1
-[ACCESS] 2025-04-10 20:41:14 admin - Local, Local, Local (Localhost)
+[ACCESS] 2025-04-11 14:25:05 admin - Local, Local, Local (Localhost)
+[ACCESS] 2025-04-11 14:29:45 admin - Local, Local, Local (Localhost)
+[ACCESS] 2025-04-11 14:29:47 admin - Local, Local, Local (Localhost)
+[INFO] Sniffer auto-restarted on port 8001
+[ACCESS] 2025-04-11 14:30:59 admin - Local, Local, Local (Localhost)
+[LIMIT REMOVED] 2025-04-11 14:31:02.247290 - Port 8009 limit removed
+[LIMIT REMOVE FAILED] 2025-04-11 14:31:03.682656 - No limit found on port 8009
+[LIMIT REMOVED] 2025-04-11 14:31:17.315448 - Port 9001 limit removed
+[INFO] Sniffer auto-restarted on port 8001
+[INFO] Sniffer auto-restarted on port 8001
+[ACCESS] 2025-04-11 14:34:14 admin - Local, Local, Local (Localhost)
+[ACCESS] 2025-04-11 14:34:58 admin - Local, Local, Local (Localhost)
