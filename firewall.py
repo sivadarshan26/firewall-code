@@ -10,6 +10,8 @@ import flask_limiter.errors
 from sniffer import start_sniffer
 from datetime import datetime
 from mail import send_alert_email
+from flask import session, flash
+from functools import wraps
 
 
 app = Flask(__name__)
@@ -17,6 +19,7 @@ limiter = Limiter(get_remote_address, app=app, default_limits=["1000 per minute"
 access_logs = []
 
 active_sniffers = {}
+app.secret_key = "b4886b4713c3b217e7954aa01d5256ea47526159f5e4a71025d2f7eb50895519!"  # Replace with something random in real apps
 
 # Function to detect OS
 def get_os():
@@ -82,7 +85,6 @@ def block_port(port):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout if result.returncode == 0 else result.stderr
 
-
 # Function to unblock a port
 def unblock_port(port):
     os_type = get_os()
@@ -126,6 +128,17 @@ def get_blocked_ports():
 
     return blocked_ports
 
+from functools import wraps
+from flask import session, redirect, url_for
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.errorhandler(flask_limiter.errors.RateLimitExceeded)
 def ratelimit_handler(e):
     ip = request.remote_addr
@@ -141,12 +154,14 @@ def ratelimit_handler(e):
 @app.route("/log_attempt", methods=["GET", "POST"])
 
 @app.route("/")
+@login_required
 def home():
     log_access(request.remote_addr)  # Add this
     blocked_ports = get_blocked_ports()
     return render_template("index.html", blocked_ports=blocked_ports)
 
 @app.route('/block', methods=['POST'])
+@login_required
 def block_port_route():
     port = request.form.get("port")
     result = block_port(port)
@@ -158,6 +173,7 @@ def block_port_route():
 
 
 @app.route("/unblock", methods=["POST"])
+@login_required
 def unblock():
     port = request.form.get("port")
     result = unblock_port(port)
@@ -169,12 +185,15 @@ def unblock():
     return home()
 
 @app.route("/log_attempt", methods=["POST"])
+@login_required
 def log_attempt():
     ip = request.remote_addr
     log_access(ip)
     return jsonify({"message": "Logged", "ip": ip})
 
 @app.route("/access_logs")
+@limiter.exempt
+@login_required
 def access_logs_view():
     log_entries = []
 
@@ -188,6 +207,7 @@ def access_logs_view():
     return jsonify(log_entries[-20:][::-1])  # Last 20 entries, newest first
 
 @app.route("/start_sniffer", methods=["POST"])
+@login_required
 def start_sniffer_route():
     port = int(request.form.get("sniff_port"))
 
@@ -208,6 +228,7 @@ def start_sniffer_route():
     return home()
 
 @app.route("/stop_sniffer", methods=["POST"])
+@login_required
 def stop_sniffer_route():
     port = int(request.form.get("sniff_port"))
 
@@ -225,12 +246,14 @@ def stop_sniffer_route():
 
 
 @app.route("/sniffed_ports")
+@login_required
 def sniffed_ports():
     return jsonify(list(active_sniffers.keys()))
 
 
 
 @app.route("/port/<int:port_number>", methods=["GET", "POST"])
+@login_required
 def simulate_port_hit(port_number):
     ip = request.remote_addr
     log_access(ip)
@@ -239,6 +262,31 @@ def simulate_port_hit(port_number):
         f.write(f"[ACCESS] Port {port_number} hit from {ip}\n")
 
     return jsonify({"message": f"Access to port {port_number} logged."})
+
+# In the login route
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        # Simple check for username and password (You can make this more complex later)
+        if username == "admin@firewall.app" and password == "admin123":
+            session["logged_in"] = True
+            flash("Logged in successfully!", "success")
+            return redirect(url_for("home"))
+        else:
+            flash("Incorrect username or password", "danger")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.pop("logged_in", None)  # Remove the "logged_in" session variable
+    flash("You have been logged out.", "info")  # Optionally show a flash message
+    return redirect(url_for("login"))  # Redirect to the login page
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
